@@ -12,7 +12,7 @@ export default defineConfig({
         secure: false,
       },
       "/uploads": {
-        target: "https://e-commerce-store-lemon-nine.vercel.app/",
+        target: "https://e-commerce-store-chi-gules.vercel.app/",
         changeOrigin: true,
         secure: false,
       },
