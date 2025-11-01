@@ -12,7 +12,7 @@ export default defineConfig({
         secure: false,
       },
       "/uploads": {
-        target: "http://localhost:8080",
+        target: "https://e-commerce-store-jade-tau.vercel.app/",
         changeOrigin: true,
         secure: false,
       },
