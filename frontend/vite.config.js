@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
+        target: "https://e-commerce-store-backend-seven.vercel.app/",
         changeOrigin: true,
         secure: false,
       },
