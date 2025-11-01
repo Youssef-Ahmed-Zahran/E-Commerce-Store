@@ -54,6 +54,7 @@ function App() {
         { path: "/", element: <Home /> },
         { path: "/login", element: <Login /> },
         { path: "/register", element: <Register /> },
+        { path: "/product/:id", element: <ProductDetails /> },
 
         // User Protected Routes
         {
@@ -65,7 +66,6 @@ function App() {
             { path: "/placeorder", element: <PlaceOrder /> },
             { path: "/order/:id", element: <Order /> },
             { path: "/shop", element: <Shop /> },
-            { path: "/product/:id", element: <ProductDetails /> },
             { path: "/cart", element: <Cart /> },
             { path: "/favorite", element: <Favorites /> },
           ],

@@ -34,6 +34,7 @@ const corsOptions = {
   exposedHeaders: ["Set-Cookie"],
   credentials: true,
 };
+
 app.use(cors(corsOptions));
 
 // Routes

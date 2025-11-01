@@ -7,12 +7,12 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://e-commerce-store-chi-gules.vercel.app/",
+        target: "http://localhost:8080",
         changeOrigin: true,
         secure: false,
       },
       "/uploads": {
-        target: "https://e-commerce-store-chi-gules.vercel.app/",
+        target: "http://localhost:8080",
         changeOrigin: true,
         secure: false,
       },
