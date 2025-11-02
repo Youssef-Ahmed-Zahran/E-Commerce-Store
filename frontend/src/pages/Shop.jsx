@@ -1,6 +1,7 @@
 // src/pages/Shop.jsx
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 import { useGetFilteredProductsQuery } from "../redux/api/productApiSlice";
 import { useFetchCategoriesQuery } from "../redux/api/categoryApiSlice";
 
@@ -9,25 +10,52 @@ import {
   setProducts,
   setChecked,
   setRadio,
+  setPaginationData,
 } from "../redux/features/shop/shopSlice";
 import Loader from "../components/Loader";
 import ProductCard from "./Products/ProductCard";
 
 const Shop = () => {
   const dispatch = useDispatch();
-  const { categories, products, checked, radio } = useSelector(
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const { categories, products, pages, hasMore } = useSelector(
     (state) => state.shop
   );
 
+  // Get all params from URL
+  const currentPage = parseInt(searchParams.get("page")) || 1;
+  const urlCategories = searchParams.get("categories");
+  const urlMinPrice = searchParams.get("minPrice");
+  const urlMaxPrice = searchParams.get("maxPrice");
+  const urlBrand = searchParams.get("brand");
+
+  // Initialize filters from URL
+  const [checked, setCheckedState] = useState(
+    urlCategories ? urlCategories.split(",") : []
+  );
+  const [radio, setRadioState] = useState(
+    urlMinPrice && urlMaxPrice
+      ? [parseFloat(urlMinPrice), parseFloat(urlMaxPrice)]
+      : []
+  );
+  const [selectedBrand, setSelectedBrandState] = useState(urlBrand || "");
+  const [minPrice, setMinPrice] = useState(urlMinPrice || "");
+  const [maxPrice, setMaxPrice] = useState(urlMaxPrice || "");
+
   const categoriesQuery = useFetchCategoriesQuery();
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("");
 
   const filteredProductsQuery = useGetFilteredProductsQuery({
     checked,
     radio,
+    page: currentPage,
   });
+
+  // Sync Redux with local state
+  useEffect(() => {
+    dispatch(setChecked(checked));
+    dispatch(setRadio(radio));
+  }, [checked, radio, dispatch]);
 
   useEffect(() => {
     if (!categoriesQuery.isLoading && categoriesQuery.data) {
@@ -37,7 +65,14 @@ const Shop = () => {
 
   useEffect(() => {
     if (!filteredProductsQuery.isLoading && filteredProductsQuery.data) {
-      let filtered = filteredProductsQuery.data;
+      const {
+        products: fetchedProducts,
+        page,
+        pages,
+        hasMore,
+      } = filteredProductsQuery.data;
+
+      let filtered = fetchedProducts;
 
       if (selectedBrand) {
         filtered = filtered.filter(
@@ -46,6 +81,7 @@ const Shop = () => {
       }
 
       dispatch(setProducts(filtered));
+      dispatch(setPaginationData({ page, pages, hasMore }));
     }
   }, [
     filteredProductsQuery.data,
@@ -54,15 +90,40 @@ const Shop = () => {
     dispatch,
   ]);
 
+  // Update URL when filters or page change
+  const updateURL = (newPage, newChecked, newRadio, newBrand) => {
+    const params = new URLSearchParams();
+
+    params.set("page", newPage.toString());
+
+    if (newChecked.length > 0) {
+      params.set("categories", newChecked.join(","));
+    }
+
+    if (newRadio.length > 0) {
+      params.set("minPrice", newRadio[0].toString());
+      params.set("maxPrice", newRadio[1].toString());
+    }
+
+    if (newBrand) {
+      params.set("brand", newBrand);
+    }
+
+    setSearchParams(params);
+  };
+
   const handleCheck = (value, id) => {
     const updatedChecked = value
       ? [...checked, id]
       : checked.filter((c) => c !== id);
-    dispatch(setChecked(updatedChecked));
+    setCheckedState(updatedChecked);
+    updateURL(1, updatedChecked, radio, selectedBrand);
   };
 
   const handleBrandClick = (brand) => {
-    setSelectedBrand(selectedBrand === brand ? "" : brand);
+    const newBrand = selectedBrand === brand ? "" : brand;
+    setSelectedBrandState(newBrand);
+    updateURL(1, checked, radio, newBrand);
   };
 
   const handlePriceFilter = () => {
@@ -74,26 +135,35 @@ const Shop = () => {
       return;
     }
 
-    dispatch(setRadio([min, max]));
+    const newRadio = [min, max];
+    setRadioState(newRadio);
+    updateURL(1, checked, newRadio, selectedBrand);
   };
 
   const clearPriceFilter = () => {
     setMinPrice("");
     setMaxPrice("");
-    dispatch(setRadio([]));
+    setRadioState([]);
+    updateURL(1, checked, [], selectedBrand);
   };
 
   const handleReset = () => {
-    dispatch(setChecked([]));
-    dispatch(setRadio([]));
+    setCheckedState([]);
+    setRadioState([]);
+    setSelectedBrandState("");
     setMinPrice("");
     setMaxPrice("");
-    setSelectedBrand("");
+    updateURL(1, [], [], "");
+  };
+
+  const handlePageChange = (newPage) => {
+    updateURL(newPage, checked, radio, selectedBrand);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const uniqueBrands = [
     ...new Set(
-      filteredProductsQuery.data
+      filteredProductsQuery.data?.products
         ?.map((product) => product.brand)
         .filter((brand) => brand && brand.trim() !== "")
     ),
@@ -107,7 +177,7 @@ const Shop = () => {
   return (
     <div className="container mx-auto max-w-8xl px-4 py-8">
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Filters Sidebar – NARROWED */}
+        {/* Filters Sidebar */}
         <aside className="bg-slate-800 rounded-2xl p-5 lg:w-64 lg:sticky lg:top-6 lg:h-fit shadow-xl">
           {/* Category Filter */}
           <div className="mb-7">
@@ -171,7 +241,10 @@ const Shop = () => {
               )}
               {selectedBrand && (
                 <button
-                  onClick={() => setSelectedBrand("")}
+                  onClick={() => {
+                    setSelectedBrandState("");
+                    updateURL(currentPage, checked, radio, "");
+                  }}
                   className="block w-full text-center text-xs text-emerald-400 hover:text-emerald-300 mt-2"
                 >
                   Clear
@@ -240,7 +313,7 @@ const Shop = () => {
           </button>
         </aside>
 
-        {/* Products Grid – MORE SPACE */}
+        {/* Products Grid */}
         <main className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5">
             <h2 className="text-2xl font-bold text-white">
@@ -250,6 +323,11 @@ const Shop = () => {
                 <>
                   {products?.length || 0} Product
                   {products?.length !== 1 ? "s" : ""}
+                  {pages > 1 && (
+                    <span className="text-gray-400 text-lg ml-2">
+                      (Page {currentPage} of {pages})
+                    </span>
+                  )}
                 </>
               )}
             </h2>
@@ -282,11 +360,82 @@ const Shop = () => {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
-              {products?.map((p) => (
-                <ProductCard key={p._id} p={p} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+                {products?.map((p) => (
+                  <ProductCard key={p._id} p={p} />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {pages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-8">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      currentPage === 1
+                        ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                        : "bg-slate-700 hover:bg-slate-600 text-white"
+                    }`}
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex gap-2">
+                    {[...Array(pages)].map((_, idx) => {
+                      const pageNum = idx + 1;
+                      // Show first, last, current, and adjacent pages
+                      if (
+                        pageNum === 1 ||
+                        pageNum === pages ||
+                        (pageNum >= currentPage - 1 &&
+                          pageNum <= currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum)}
+                            className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                              currentPage === pageNum
+                                ? "bg-emerald-500 text-white"
+                                : "bg-slate-700 hover:bg-slate-600 text-white"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      } else if (
+                        pageNum === currentPage - 2 ||
+                        pageNum === currentPage + 2
+                      ) {
+                        return (
+                          <span
+                            key={pageNum}
+                            className="w-10 h-10 flex items-center justify-center text-gray-400"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!hasMore}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      !hasMore
+                        ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                        : "bg-slate-700 hover:bg-slate-600 text-white"
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>

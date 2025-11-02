@@ -1,11 +1,58 @@
 import Message from "../../components/Message";
 import Loader from "../../components/Loader";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useGetOrdersQuery } from "../../redux/api/orderApiSlice";
 import AdminMenu from "./AdminMenu";
 
 const OrderList = () => {
-  const { data: orders, isLoading, error } = useGetOrdersQuery();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page")) || 1;
+
+  const { data, isLoading, error } = useGetOrdersQuery({ page: currentPage });
+
+  const handlePageChange = (newPage) => {
+    setSearchParams({ page: newPage.toString() });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const renderPageNumbers = () => {
+    if (!data?.pages) return [];
+
+    const pageNumbers = [];
+    const maxVisible = 5;
+    const { pages } = data;
+
+    if (pages <= maxVisible) {
+      for (let i = 1; i <= pages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      pageNumbers.push(1);
+
+      if (currentPage > 3) {
+        pageNumbers.push("...");
+      }
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(pages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        if (!pageNumbers.includes(i)) {
+          pageNumbers.push(i);
+        }
+      }
+
+      if (currentPage < pages - 2) {
+        pageNumbers.push("...");
+      }
+
+      if (!pageNumbers.includes(pages)) {
+        pageNumbers.push(pages);
+      }
+    }
+
+    return pageNumbers;
+  };
 
   return (
     <>
@@ -18,6 +65,16 @@ const OrderList = () => {
       ) : (
         <div className="container mx-auto px-4">
           <AdminMenu />
+
+          {/* Header with Page Info */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-white">All Orders</h1>
+            {data?.pages > 1 && (
+              <div className="bg-slate-700 px-4 py-2 rounded-full text-sm font-medium text-gray-300">
+                Page {data.page} of {data.pages}
+              </div>
+            )}
+          </div>
 
           {/* Desktop Table View */}
           <div className="hidden lg:block overflow-x-auto">
@@ -36,7 +93,7 @@ const OrderList = () => {
               </thead>
 
               <tbody>
-                {orders.map((order) => (
+                {data?.orders?.map((order) => (
                   <tr key={order._id} className="border-b ">
                     <td className="py-4">
                       <img
@@ -92,7 +149,7 @@ const OrderList = () => {
 
           {/* Mobile & Tablet Card View */}
           <div className="lg:hidden space-y-4 mt-4">
-            {orders.map((order) => (
+            {data?.orders?.map((order) => (
               <div
                 key={order._id}
                 className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-lg shadow-lg p-4"
@@ -169,6 +226,81 @@ const OrderList = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {data?.pages > 1 && (
+            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
+              {/* Previous Button */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-600 transition-all duration-200 hover:shadow-lg"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Previous
+              </button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-2">
+                {renderPageNumbers().map((pageNum, index) =>
+                  pageNum === "..." ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-2 text-gray-500 font-bold"
+                    >
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`min-w-[40px] h-10 rounded-lg font-semibold transition-all duration-200 ${
+                        currentPage === pageNum
+                          ? "bg-blue-500 text-white shadow-lg shadow-blue-500/50 scale-105"
+                          : "bg-slate-700 text-gray-300 hover:bg-slate-600 hover:shadow-md"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                )}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!data?.hasMore}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-600 transition-all duration-200 hover:shadow-lg"
+              >
+                Next
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </>

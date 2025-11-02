@@ -13,8 +13,11 @@ export const productApiSlice = apiSlice.injectEndpoints({
     }),
 
     allProducts: builder.query({
-      query: () => `${PRODUCT_URL}/allProducts`,
-      providesTags: ["Products"],
+      query: ({ page = 1 } = {}) => ({
+        url: `${PRODUCT_URL}/allproducts?page=${page}`,
+      }),
+      providesTags: ["Product"],
+      keepUnusedDataFor: 5,
     }),
 
     getProductById: builder.query({
@@ -94,11 +97,12 @@ export const productApiSlice = apiSlice.injectEndpoints({
     }),
 
     getFilteredProducts: builder.query({
-      query: ({ checked, radio }) => ({
-        url: `${PRODUCT_URL}/filtered-products`,
+      query: ({ checked, radio, page = 1 }) => ({
+        url: `${PRODUCT_URL}/filtered-products?page=${page}`,
         method: "POST",
         body: { checked, radio },
       }),
+      keepUnusedDataFor: 5,
       providesTags: ["Products"],
     }),
   }),

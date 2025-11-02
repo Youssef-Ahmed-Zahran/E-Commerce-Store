@@ -5,6 +5,10 @@ const initialState = {
   products: [],
   checked: [],
   radio: [],
+  selectedBrand: "",
+  page: 1,
+  pages: 1,
+  hasMore: false,
 };
 
 const shopSlice = createSlice({
@@ -26,6 +30,14 @@ const shopSlice = createSlice({
     setSelectedBrand: (state, action) => {
       state.selectedBrand = action.payload;
     },
+    setPage: (state, action) => {
+      state.page = action.payload;
+    },
+    setPaginationData: (state, action) => {
+      state.page = action.payload.page;
+      state.pages = action.payload.pages;
+      state.hasMore = action.payload.hasMore;
+    },
   },
 });
 
@@ -35,6 +47,8 @@ export const {
   setChecked,
   setRadio,
   setSelectedBrand,
+  setPage,
+  setPaginationData,
 } = shopSlice.actions;
 
 export default shopSlice.reducer;

@@ -38,16 +38,16 @@ export const orderApiSlice = apiSlice.injectEndpoints({
     }),
 
     getMyOrders: builder.query({
-      query: () => ({
-        url: `${ORDERS_URL}/mine`,
+      query: ({ page = 1 }) => ({
+        url: `${ORDERS_URL}/mine?page=${page}`,
       }),
       providesTags: ["Order"],
       keepUnusedDataFor: 5,
     }),
 
     getOrders: builder.query({
-      query: () => ({
-        url: ORDERS_URL,
+      query: ({ page = 1 }) => ({
+        url: `${ORDERS_URL}?page=${page}`,
       }),
       providesTags: ["Order"],
     }),

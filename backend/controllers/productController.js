@@ -154,11 +154,23 @@ const deleteProduct = asyncHandler(async (req, res) => {
  */
 const fetchAllProducts = asyncHandler(async (req, res) => {
   try {
+    const pageSize = 12;
+    const page = Number(req.query.page) || 1;
+
+    const count = await Product.countDocuments();
     const products = await Product.find()
       .populate("category")
-      .limit(12)
-      .sort({ createdAt: -1 });
-    return res.status(200).json(products);
+      .sort({ createdAt: -1 })
+      .limit(pageSize)
+      .skip(pageSize * (page - 1));
+
+    res.status(200).json({
+      products,
+      page,
+      pages: Math.ceil(count / pageSize),
+      hasMore: page < Math.ceil(count / pageSize),
+      total: count,
+    });
   } catch (error) {
     console.log(error);
     return res.status(400).json(error.message);
@@ -255,6 +267,8 @@ const fetchNewProducts = asyncHandler(async (req, res) => {
 const filterProducts = asyncHandler(async (req, res) => {
   try {
     const { checked, radio } = req.body;
+    const pageSize = 12;
+    const page = Number(req.query.page) || 1;
 
     let args = {};
     if (checked.length > 0) {
@@ -264,8 +278,19 @@ const filterProducts = asyncHandler(async (req, res) => {
       args.price = { $gte: radio[0], $lte: radio[1] };
     }
 
-    const products = await Product.find(args);
-    res.status(200).json(products);
+    const count = await Product.countDocuments(args);
+
+    const products = await Product.find(args)
+      .limit(pageSize)
+      .skip(pageSize * (page - 1))
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      products,
+      page,
+      pages: Math.ceil(count / pageSize),
+      hasMore: page < Math.ceil(count / pageSize),
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server Error" });

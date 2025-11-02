@@ -12,7 +12,7 @@ const {
   getCategoryById,
 } = require("../controllers/categoryController");
 
-router.get("/categories", verifyTokenAndAdmin, listCategory);
+router.get("/categories", verifyToken , listCategory);
 
 router.get("/:id", getCategoryById);
 
